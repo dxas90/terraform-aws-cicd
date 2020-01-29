@@ -177,6 +177,8 @@ resource "aws_iam_role_policy_attachment" "codebuild_s3" {
   policy_arn = join("", aws_iam_policy.s3.*.arn)
 }
 
+# https://docs.aws.amazon.com/codepipeline/latest/userguide/reference-pipeline-structure.html#structure-configuration-examples
+
 # Only one of the `aws_codepipeline` resources below will be created:
 
 # "source_build_deploy" will be created if `var.enabled` is set to `true` and the Elastic Beanstalk application name and environment name are specified
@@ -210,16 +212,13 @@ resource "aws_codepipeline" "default" {
     action {
       name             = "Source"
       category         = "Source"
-      owner            = "ThirdParty"
-      provider         = "GitHub"
+      provider         = "Amazon S3"
       version          = "1"
       output_artifacts = ["code"]
 
       configuration = {
-        OAuthToken           = var.github_oauth_token
-        Owner                = var.repo_owner
-        Repo                 = var.repo_name
-        Branch               = var.branch
+        S3Bucket             = var.S3_bucket
+        S3ObjectKey          = var.S3_object_key
         PollForSourceChanges = var.poll_source_changes
       }
     }
@@ -237,6 +236,24 @@ resource "aws_codepipeline" "default" {
 
       input_artifacts  = ["code"]
       output_artifacts = ["package"]
+
+      configuration = {
+        ProjectName = module.codebuild.project_name
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+
+    action {
+      name     = "Deploy"
+      category = "Deploy"
+      owner    = "AWS"
+      provider = "Amazon ECS"
+      version  = "1"
+
+      input_artifacts  = ["package"]
 
       configuration = {
         ProjectName = module.codebuild.project_name

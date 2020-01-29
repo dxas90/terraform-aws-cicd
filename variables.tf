@@ -33,6 +33,16 @@ variable "elastic_beanstalk_environment_name" {
   description = "Elastic Beanstalk environment name. If not provided or set to empty string, the ``Deploy`` stage of the pipeline will not be created"
 }
 
+variable "S3_bucket" {
+  type        = string
+  description = "Bucket with the sources"
+}
+
+variable "S3_object_key" {
+  type        = string
+  description = "The object inside the bucket"
+}
+
 variable "github_oauth_token" {
   type        = string
   description = "GitHub Oauth Token"
