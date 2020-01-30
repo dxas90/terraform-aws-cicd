@@ -150,11 +150,16 @@ data "aws_iam_policy_document" "codebuild" {
 }
 
 module "codebuild" {
-  source                      = "git::https://github.com/cloudposse/terraform-aws-codebuild.git?ref=tags/0.17.0"
+  source                      = "git::https://github.com/dxas90/terraform-aws-codebuild.git?ref=tags/0.17.0"
+  # source                      = "../terraform-aws-codebuild"
   enabled                     = var.enabled
   namespace                   = var.namespace
   name                        = var.name
   stage                       = var.stage
+  artifact_type               = "NO_ARTIFACTS"
+  source_type                 = "S3"
+  source_location             = "${var.S3_bucket}/${var.S3_object_key}"
+  cache_enabled               = false
   build_image                 = var.build_image
   build_compute_type          = var.build_compute_type
   buildspec                   = var.buildspec
@@ -183,17 +188,9 @@ resource "aws_iam_role_policy_attachment" "codebuild_s3" {
 
 # "source_build_deploy" will be created if `var.enabled` is set to `true` and the Elastic Beanstalk application name and environment name are specified
 
-# This is used in two use-cases:
-
-# 1. GitHub -> S3 -> Elastic Beanstalk (running application stack like Node, Go, Java, IIS, Python)
-
-# 2. GitHub -> ECR (Docker image) -> Elastic Beanstalk (running Docker stack)
-
-# "source_build" will be created if `var.enabled` is set to `true` and the Elastic Beanstalk application name or environment name are not specified
-
 # This is used in this use-case:
 
-# 1. GitHub -> ECR (Docker image)
+# 1. S3 -> ECR (Docker image)
 
 resource "aws_codepipeline" "default" {
   # Elastic Beanstalk application name and environment name are specified
@@ -212,7 +209,8 @@ resource "aws_codepipeline" "default" {
     action {
       name             = "Source"
       category         = "Source"
-      provider         = "Amazon S3"
+      owner            = "AWS"
+      provider         = "S3"
       version          = "1"
       output_artifacts = ["code"]
 
@@ -250,34 +248,14 @@ resource "aws_codepipeline" "default" {
       name     = "Deploy"
       category = "Deploy"
       owner    = "AWS"
-      provider = "Amazon ECS"
+      provider = "ECS"
       version  = "1"
 
       input_artifacts  = ["package"]
 
       configuration = {
-        ProjectName = module.codebuild.project_name
-      }
-    }
-  }
-
-  dynamic "stage" {
-    for_each = var.elastic_beanstalk_application_name != "" && var.elastic_beanstalk_environment_name != "" ? ["true"] : []
-    content {
-      name = "Deploy"
-
-      action {
-        name            = "Deploy"
-        category        = "Deploy"
-        owner           = "AWS"
-        provider        = "ElasticBeanstalk"
-        input_artifacts = ["package"]
-        version         = "1"
-
-        configuration = {
-          ApplicationName = var.elastic_beanstalk_application_name
-          EnvironmentName = var.elastic_beanstalk_environment_name
-        }
+        ClusterName = "${module.label.name}"
+        ServiceName = "${module.label.namespace}-${module.label.name}-${module.label.stage}"
       }
     }
   }

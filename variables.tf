@@ -45,21 +45,25 @@ variable "S3_object_key" {
 
 variable "github_oauth_token" {
   type        = string
+  default     = ""
   description = "GitHub Oauth Token"
 }
 
 variable "repo_owner" {
   type        = string
+  default     = ""
   description = "GitHub Organization or Person name"
 }
 
 variable "repo_name" {
   type        = string
+  default     = ""
   description = "GitHub repository name of the application to be built (and deployed to Elastic Beanstalk if configured)"
 }
 
 variable "branch" {
   type        = string
+  default     = "master"
   description = "Branch of the GitHub repository, _e.g._ `master`"
 }
 
